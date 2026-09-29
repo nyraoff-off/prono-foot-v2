@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prono Foot</title>
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --bg-panel: #141416;
+    --bg-panel-hover: #1c1c1f;
+    --border: #2a2a2e;
+    --text: #f2f2f2;
+    --text-dim: #9a9a9f;
+    --accent: #6fd6a0;
+    --accent-dim: #4a9c74;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    padding: 0;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100%;
+  }
+  main {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px 40px 20px;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    margin-bottom: 32px;
+    font-size: 14px;
+    text-align: center;
+  }
+  .search-wrap {
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+  }
+  input {
+    width: 100%;
+    padding: 16px 20px;
+    font-size: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--text);
+    outline: none;
+  }
+  .matches-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 10;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .match-item {
+    padding: 14px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+  }
+  .match-item:last-child { border-bottom: none; }
+  .match-item:active { background: var(--bg-panel-hover); }
+  .match-title { font-size: 15px; }
+  .match-meta {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .status-text {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  button.analyze-btn {
+    margin-top: 24px;
+    padding: 14px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #0a0a0b;
+    cursor: pointer;
+  }
+  button.analyze-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .error-text {
+    margin-top: 20px;
+    color: #e07a7a;
+    font-size: 14px;
+    text-align: center;
+  }
+  .results {
+    width: 100%;
+    max-width: 560px;
+    margin-top: 36px;
+  }
+  .results h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 18px;
+  }
+  .pred-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .pred-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .pred-label { font-size: 16px; font-weight: 600; }
+  .pred-confidence { font-size: 14px; font-weight: 600; color: var(--accent); }
+  .pred-reason { font-size: 14px; color: var(--text-dim); }
+  .warning-text {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 16px;
+    font-style: italic;
+  }
+  .setup-box {
+    width: 100%;
+    max-width: 480px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .setup-box strong { color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Prono Foot</h1>
+  <p class="subtitle">Analyse complete d'un match avant qu'il ait lieu</p>
+
+  <div id="setupBox" class="setup-box" style="display:none;">
+    Pour utiliser le site, colle ta cle API-Football ici :
+    <div style="margin-top:10px; display:flex; gap:8px;">
+      <input id="apiKeyInput" type="text" placeholder="Ta cle API" style="flex:1; padding:10px 14px; font-size:14px;">
+      <button onclick="saveApiKey()" style="padding:10px 16px; border-radius:8px; border:none; background:var(--accent); color:#0a0a0b; font-weight:600; cursor:pointer;">OK</button>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <input id="searchInput" type="text" placeholder="Cherchez votre match" autocomplete="off">
+    <div id="matchesDropdown"></div>
+    <div id="statusText" class="status-text"></div>
+  </div>
+
+  <button id="analyzeBtn" class="analyze-btn" style="display:none;" onclick="handleAnalyze()">Analyser</button>
+
+  <div id="errorText" class="error-text" style="display:none;"></div>
+
+  <div id="results" class="results" style="display:none;"></div>
+</main>
+
+<script>
+  const BASE_URL = "https://v3.football.api-sports.io";
+  let apiKey = localStorage.getItem("apiFootballKey") || "";
+  let selectedMatch = null;
+  let searchTimeout = null;
+
+  function saveApiKey() {
+    const val = document.getElementById("apiKeyInput").value.trim();
+    if (val) {
+      apiKey = val;
+      localStorage.setItem("apiFootballKey", val);
+      document.getElementById("setupBox").style.display = "none";
+    }
+  }
+
+  if (!apiKey) {
+    document.getElementById("setupBox").style.display = "block";
+  }
+
+  async function apiFetch(path) {
+    const res = await fetch(BASE_URL + path, {
+      headers: { "x-apisports-key": apiKey }
+    });
+    return res.json();
+  }
+
+  document.getElementById("searchInput").addEventListener("input", function(e) {
+    const value = e.target.value;
+    selectedMatch = null;
+    document.getElementById("analyzeBtn").style.display = "none";
+    document.getElementById("results").style.display = "none";
+    document.getElementById("errorText").style.display = "none";
+
+    clearTimeout(searchTimeout);
+    if (value.trim().length < 2) {
+      document.getElementById("matchesDropdown").innerHTML = "";
+      document.getElementById("statusText").textContent = "";
+      return;
+    }
+    if (!apiKey) {
+      document.getElementById("statusText").textContent = "Colle d'abord ta cle API ci-dessus.";
+      return;
+    }
+
+    searchTimeout = setTimeout(() => searchMatches(value), 500);
+  });
+
+  async function searchMatches(team) {
+    document.getElementById("statusText").textContent = "Recherche en cours...";
+    try {
+      const teamData = await apiFetch("/teams?search=" + encodeURIComponent(team));
+      if (!teamData.response || teamData.response.length === 0) {
+        document.getElementById("matchesDropdown").innerHTML = "";
+        document.getElementById("statusText").textContent = "Aucune equipe trouvee.";
+        return;
+      }
+
+      const teamIds = teamData.response.slice(0, 3).map(t => t.team.id);
+      let allMatches = [];
+      for (const id of teamIds) {
+        const fixturesData = await apiFetch("/fixtures?team=" + id + "&next=5");
+        if (fixturesData.response) {
+          allMatches.push(...fixturesData.response);
+        }
+      }
+
+      document.getElementById("statusText").textContent = "";
+      renderMatches(allMatches);
+    } catch (err) {
+      document.getElementById("statusText").textContent = "Erreur lors de la recherche.";
+    }
+  }
+
+  function renderMatches(fixtures) {
+    const dropdown = document.getElementById("matchesDropdown");
+    if (fixtures.length === 0) {
+      dropdown.innerHTML = "";
+      document.getElementById("statusText").textContent = "Aucun match a venir trouve.";
+      return;
+    }
+    dropdown.innerHTML = "";
+    dropdown.className = "matches-dropdown";
+    fixtures.forEach(f => {
+      const div = document.createElement("div");
+      div.className = "match-item";
+      const dateStr = new Date(f.fixture.date).toLocaleString("fr-FR", {
+        day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+      });
+      div.innerHTML = '<div class="match-title">' + f.teams.home.name + ' - ' + f.teams.away.name + '</div>' +
+        '<div class="match-meta">' + f.league.name + ' - ' + dateStr + '</div>';
+      div.onclick = () => selectMatch(f);
+      dropdown.appendChild(div);
+    });
+  }
+
+  function selectMatch(fixture) {
+    selectedMatch = fixture;
+    document.getElementById("matchesDropdown").innerHTML = "";
+    document.getElementById("searchInput").value = fixture.teams.home.name + " - " + fixture.teams.away.name;
+    document.getElementById("analyzeBtn").style.display = "inline-block";
+    document.getElementById("results").style.display = "none";
+  }
+
+  function computeForm(fixtures, teamId) {
+    let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
+    for (const f of fixtures) {
+      const isHome = f.teams.home.id === teamId;
+      const gf = isHome ? f.goals.home : f.goals.away;
+      const ga = isHome ? f.goals.away : f.goals.home;
+      if (gf === null || ga === null) continue;
+      goalsFor += gf;
+      goalsAgainst += ga;
+      if (gf > ga) wins++;
+      else if (gf === ga) draws++;
+      else losses++;
+    }
+    const played = wins + draws + losses;
+    return {
+      played, wins, draws, losses,
+      avgGoalsFor: played ? +(goalsFor / played).toFixed(2) : 0,
+      avgGoalsAgainst: played ? +(goalsAgainst / played).toFixed(2) : 0
+    };
+  }
+
+  async function handleAnalyze() {
+    if (!selectedMatch) return;
+    const btn = document.getElementById("analyzeBtn");
+    btn.disabled = true;
+    btn.textContent = "Analyse en cours...";
+    document.getElementById("errorText").style.display = "none";
+    document.getElementById("results").style.display = "none";
+
+    try {
+      const homeId = selectedMatch.teams.home.id;
+      const awayId = selectedMatch.teams.away.id;
+      const homeName = selectedMatch.teams.home.name;
+      const awayName = selectedMatch.teams.away.name;
+
+      const [homeLast, awayLast, h2h] = await Promise.all([
+        apiFetch("/fixtures?team=" + homeId + "&last=5"),
+        apiFetch("/fixtures?team=" + awayId + "&last=5"),
+        apiFetch("/fixtures/headtohead?h2h=" + homeId + "-" + awayId + "&last=5")
+      ]);
+
+      const homeForm = computeForm(homeLast.response || [], homeId);
+      const awayForm = computeForm(awayLast.response || [], awayId);
+
+      let h2hHomeWins = 0, h2hAwayWins = 0;
+      for (const f of (h2h.response || [])) {
+        if (f.goals.home === null || f.goals.away === null) continue;
+        const homeWasHome = f.teams.home.id === homeId;
+        const goalsHomeTeam = homeWasHome ? f.goals.home : f.goals.away;
+        const goalsAwayTeam = homeWasHome ? f.goals.away : f.goals.home;
+        if (goalsHomeTeam > goalsAwayTeam) h2hHomeWins++;
+        else if (goalsHomeTeam < goalsAwayTeam) h2hAwayWins++;
+      }
+
+      let homeScore = homeForm.wins * 3 + homeForm.draws * 1 + homeForm.avgGoalsFor * 2 - homeForm.avgGoalsAgainst;
+      let awayScore = awayForm.wins * 3 + awayForm.draws * 1 + awayForm.avgGoalsFor * 2 - awayForm.avgGoalsAgainst;
+      homeScore += 2;
+      homeScore += h2hHomeWins * 0.5;
+      awayScore += h2hAwayWins * 0.5;
+
+      const total = Math.max(homeScore + awayScore, 0.1);
+      let homeWinProb = Math.round((homeScore / total) * 100);
+      let awayWinProb = Math.round((awayScore / total) * 100);
+      const gap = Math.abs(homeScore - awayScore);
+      let drawProb = Math.max(15, 30 - Math.round(gap));
+
+      let sum = homeWinProb + awayWinProb + drawProb;
+      homeWinProb = Math.round((homeWinProb / sum) * 100);
+      awayWinProb = Math.round((awayWinProb / sum) * 100);
+      drawProb = 100 - homeWinProb - awayWinProb;
+
+      const expectedGoals = homeForm.avgGoalsFor + awayForm.avgGoalsFor + (homeForm.avgGoalsAgainst + awayForm.avgGoalsAgainst) / 2;
+      const overProb = Math.min(90, Math.max(35, Math.round(expectedGoals * 18)));
+
+      const candidates = [];
+
+      if (homeWinProb >= awayWinProb && homeWinProb >= drawProb) {
+        candidates.push({
+          label: "Victoire " + homeName,
+          confidence: homeWinProb,
+          reason: homeName + " affiche une meilleure forme recente (" + homeForm.wins + " victoires sur " + homeForm.played + ") et joue a domicile."
+        });
+      } else if (awayWinProb >= homeWinProb && awayWinProb >= drawProb) {
+        candidates.push({
+          label: "Victoire " + awayName,
+          confidence: awayWinProb,
+          reason: awayName + " arrive avec une dynamique favorable (" + awayForm.wins + " victoires sur " + awayForm.played + " derniers matchs)."
+        });
+      } else {
+        candidates.push({
+          label: "Match nul",
+          confidence: drawProb,
+          reason: "Les deux equipes affichent un niveau tres proche sur leurs derniers matchs."
+        });
+      }
+
+      candidates.push({
+        label: expectedGoals >= 2.5 ? "Plus de 2.5 buts" : "Moins de 2.5 buts",
+        confidence: expectedGoals >= 2.5 ? overProb : 100 - overProb,
+        reason: "Moyenne combinee d'environ " + expectedGoals.toFixed(1) + " buts par match sur les statistiques recentes des deux equipes."
+      });
+
+      candidates.push({
+        label: homeName + " et " + awayName + " marquent tous les deux",
+        confidence: Math.min(85, Math.round(((homeForm.avgGoalsFor + awayForm.avgGoalsFor) / 2) * 35)),
+        reason: homeName + " marque en moyenne " + homeForm.avgGoalsFor + " buts et " + awayName + " " + awayForm.avgGoalsFor + ", les deux attaques sont actives."
+      });
+
+      const predictions = candidates.slice(0, 3);
+      const lowDataWarning = (homeForm.played < 3 || awayForm.played < 3)
+        ? "Attention, peu de matchs recents disponibles pour une des deux equipes : analyse a prendre avec prudence."
+        : null;
+
+      renderResults(homeName, awayName, predictions, lowDataWarning);
+    } catch (err) {
+      document.getElementById("errorText").textContent = "Erreur lors de l'analyse du match.";
+      document.getElementById("errorText").style.display = "block";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Analyser";
+    }
+  }
+
+  function renderResults(homeName, awayName, predictions, warning) {
+    const container = document.getElementById("results");
+    let html = "<h2>" + homeName + " - " + awayName + "</h2>";
+    predictions.forEach(p => {
+      html += '<div class="pred-card">' +
+        '<div class="pred-top"><div class="pred-label">' + p.label + '</div>' +
+        '<div class="pred-confidence">' + p.confidence + '%</div></div>' +
+        '<div class="pred-reason">' + p.reason + '</div></div>';
+    });
+    if (warning) {
+      html += '<div class="warning-text">' + warning + '</div>';
+    }
+    container.innerHTML = html;
+    container.style.display = "block";
+  }
+</script>
+</body>
+</html>
